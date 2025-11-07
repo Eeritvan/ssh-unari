@@ -34,10 +34,10 @@ var CAMPUS_RESTAURANTS = map[string][]string{
 }
 
 const (
-	homeView int = iota
-	restaurantView
-	terminalInfoView
-	testingView
+	keskustaView int = iota
+	kumpulaView
+	meilahtiView
+	viikkiView
 	totalViews
 )
 
@@ -98,7 +98,7 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderRight(true).
 		Padding(1, 2).
-		Width(20) // TODO: dynamic width
+		Width(20)
 	sidebarItemStyle := renderer.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#FAFAFA")).
@@ -138,7 +138,7 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		sidebarSelectedItemStyle: sidebarSelectedItemStyle,
 		navStyle:                 navStyle,
 		contentStyle:             contentStyle,
-		currentView:              homeView,
+		currentView:              kumpulaView,
 		data:                     unicafeData,
 	}
 	return m, []tea.ProgramOption{tea.WithAltScreen()}
@@ -193,13 +193,13 @@ func (m model) View() string {
 	var content string
 
 	switch m.currentView {
-	case homeView:
+	case keskustaView:
 		content = m.renderRestaurant(m.currentView)
-	case restaurantView:
+	case kumpulaView:
 		content = m.renderRestaurant(m.currentView)
-	case terminalInfoView:
+	case meilahtiView:
 		content = m.renderRestaurant(m.currentView)
-	case testingView:
+	case viikkiView:
 		content = m.renderRestaurant(m.currentView)
 	}
 
