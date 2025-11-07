@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	fetch "github.com/eeritvan/unari-ssh/pkg"
+	fetch "github.com/eeritvan/unari-ssh/pkg/fetch"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -24,6 +24,17 @@ import (
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
 	"github.com/joho/godotenv"
+)
+
+var data []fetch.Unicafe
+
+type viewType int
+
+const (
+	homeView viewType = iota
+	restaurantView
+	terminalInfoView
+	totalViews
 )
 
 func main() {
@@ -40,7 +51,7 @@ func main() {
 		wish.WithHostKeyPath(".ssh/id_ed25519"),
 		wish.WithMiddleware(
 			bubbletea.Middleware(teaHandler),
-			activeterm.Middleware(), // Bubble Tea apps usually require a PTY.
+			activeterm.Middleware(),
 			logging.Middleware(),
 		),
 	)
@@ -67,26 +78,24 @@ func main() {
 	}
 }
 
-// You can wire any Bubble Tea model up to the middleware with a function that
-// handles the incoming ssh.Session. Here we just grab the terminal info and
-// pass it to the new model. You can also return tea.ProgramOptions (such as
-// tea.WithAltScreen) on a session by session basis.
 func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
-	// This should never fail, as we are using the activeterm middleware.
 	pty, _, _ := s.Pty()
 
-	// When running a Bubble Tea app over SSH, you shouldn't use the default
-	// lipgloss.NewStyle function.
-	// That function will use the color profile from the os.Stdin, which is the
-	// server, not the client.
-	// We provide a MakeRenderer function in the bubbletea middleware package,
-	// so you can easily get the correct renderer for the current session, and
-	// use it to create the styles.
-	// The recommended way to use these styles is to then pass them down to
-	// your Bubble Tea model.
 	renderer := bubbletea.MakeRenderer(s)
 	txtStyle := renderer.NewStyle().Foreground(lipgloss.Color("10"))
 	quitStyle := renderer.NewStyle().Foreground(lipgloss.Color("8"))
+	titleStyle := renderer.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#7D56F4")).
+		Padding(1, 2).
+		BorderStyle(lipgloss.NormalBorder())
+	navStyle := renderer.NewStyle().
+		Foreground(lipgloss.Color("12")).
+		Italic(true)
+	sidebarStyle := renderer.NewStyle().
+		Foreground(lipgloss.Color("#04B575")).
+		Align(lipgloss.Left)
 
 	bg := "light"
 	if renderer.HasDarkBackground() {
@@ -94,26 +103,33 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	}
 
 	m := model{
-		term:      pty.Term,
-		profile:   renderer.ColorProfile().Name(),
-		width:     pty.Window.Width,
-		height:    pty.Window.Height,
-		bg:        bg,
-		txtStyle:  txtStyle,
-		quitStyle: quitStyle,
+		term:         pty.Term,
+		profile:      renderer.ColorProfile().Name(),
+		width:        pty.Window.Width,
+		height:       pty.Window.Height,
+		bg:           bg,
+		txtStyle:     txtStyle,
+		quitStyle:    quitStyle,
+		titleStyle:   titleStyle,
+		navStyle:     navStyle,
+		sidebarStyle: sidebarStyle,
+		currentView:  homeView,
 	}
 	return m, []tea.ProgramOption{tea.WithAltScreen()}
 }
 
-// Just a generic tea.Model to demo terminal information of ssh.
 type model struct {
-	term      string
-	profile   string
-	width     int
-	height    int
-	bg        string
-	txtStyle  lipgloss.Style
-	quitStyle lipgloss.Style
+	term         string
+	profile      string
+	width        int
+	height       int
+	bg           string
+	txtStyle     lipgloss.Style
+	quitStyle    lipgloss.Style
+	titleStyle   lipgloss.Style
+	navStyle     lipgloss.Style
+	sidebarStyle lipgloss.Style
+	currentView  viewType
 }
 
 func (m model) Init() tea.Cmd {
@@ -129,21 +145,77 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "up", "k":
+			m.currentView--
+			if m.currentView < 0 {
+				m.currentView = totalViews - 1
+			}
+		case "down", "j":
+			m.currentView++
+			if m.currentView >= totalViews {
+				m.currentView = 0
+			}
 		}
 	}
 	return m, nil
 }
 
 func (m model) View() string {
-	restaurants, err := fetch.GetUnicafe()
-	if err != nil {
-		fmt.Println(err)
+	var content string
+
+	switch m.currentView {
+	case homeView:
+		content = m.renderHomeView()
+	case restaurantView:
+		content = m.renderRestaurantView()
+	case terminalInfoView:
+		content = m.renderTerminalInfoView()
 	}
 
-	for index, restaurant := range restaurants {
-		fmt.Println(index, restaurant.Title)
+	nav := m.navStyle.Render(fmt.Sprintf("\n\nView %d/%d",
+		int(m.currentView)+1, int(totalViews)))
+	quit := m.quitStyle.Render("\nPress 'q' to quit")
+
+	return content + nav + quit
+}
+
+func (m model) renderHomeView() string {
+	title := m.titleStyle.Render("view 1")
+	content := m.txtStyle.Render("yo yo yo.")
+	return title + content
+}
+
+func (m model) renderRestaurantView() string {
+	title := m.titleStyle.Render("view 2")
+
+	if len(data) == 0 {
+		var err error
+		restaurants, err := fetch.GetUnicafe()
+		if err != nil {
+			return title + "\n" + m.txtStyle.Render(fmt.Sprintf("\nError loading restaurants: %v", err))
+		}
+		data = restaurants
 	}
 
-	s := fmt.Sprintf("Your term is %s\nYour window size is %dx%d\nBackground: %s\nColor Profile: %s", m.term, m.width, m.height, m.bg, m.profile)
-	return m.txtStyle.Render(s) + "\n\n" + m.quitStyle.Render("Press 'q' to quit\n")
+	var restaurantList string
+	for index, restaurant := range data {
+		restaurantList += fmt.Sprintf("\n  %d. %s", index+1, restaurant.Title)
+	}
+
+	content := m.txtStyle.Render(restaurantList)
+	return title + content
+}
+
+func (m model) renderTerminalInfoView() string {
+	title := m.titleStyle.Render("view 3")
+
+	info := fmt.Sprintf(`
+		Terminal: %s
+		Window Size: %dx%d
+		Background: %s
+		Color Profile: %s`,
+		m.term, m.width, m.height, m.bg, m.profile)
+
+	content := m.txtStyle.Render(info)
+	return title + content
 }
