@@ -242,8 +242,6 @@ func (m model) renderRestaurant(idx int) string {
 	campus := CAMPUSES[idx]
 	campusRestaurants := CAMPUS_RESTAURANTS[campus]
 
-	fmt.Println(m.selectedDate)
-
 	var restaurantList string
 	for _, restaurant := range m.data {
 		name := restaurant.Title
@@ -264,7 +262,7 @@ func (m model) renderRestaurant(idx int) string {
 
 	content := m.txtStyle.Render(restaurantList)
 
-	return content
+	return m.txtStyle.Render(m.selectedDate.Format("Monday 2.1")) + content
 }
 
 func (m model) renderBottomNav() string {
