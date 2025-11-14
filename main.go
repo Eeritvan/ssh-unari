@@ -88,7 +88,6 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 
 	renderer := bubbletea.MakeRenderer(s)
 	txtStyle := renderer.NewStyle().Foreground(lipgloss.Color("10"))
-	quitStyle := renderer.NewStyle().Foreground(lipgloss.Color("8"))
 	sidebarStyle := renderer.NewStyle().
 		Foreground(lipgloss.Color("#04B575")).
 		BorderStyle(lipgloss.NormalBorder()).
@@ -112,8 +111,10 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		Width(16).
 		Align(lipgloss.Center)
 	navStyle := renderer.NewStyle().
-		Foreground(lipgloss.Color("12")).
-		Italic(true)
+		Bold(true).
+		Italic(true).
+		TabWidth(4).
+		Foreground(lipgloss.Color("#3C3C3C"))
 	contentStyle := renderer.NewStyle().
 		Padding(1, 2)
 	bg := "light"
@@ -130,7 +131,6 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		height:                   pty.Window.Height,
 		bg:                       bg,
 		txtStyle:                 txtStyle,
-		quitStyle:                quitStyle,
 		sidebarStyle:             sidebarStyle,
 		sidebarItemStyle:         sidebarItemStyle,
 		sidebarSelectedItemStyle: sidebarSelectedItemStyle,
@@ -151,7 +151,6 @@ type model struct {
 	bg                       string
 	currentView              int
 	txtStyle                 lipgloss.Style
-	quitStyle                lipgloss.Style
 	navStyle                 lipgloss.Style
 	sidebarStyle             lipgloss.Style
 	sidebarItemStyle         lipgloss.Style
@@ -269,8 +268,15 @@ func (m model) renderRestaurant(idx int) string {
 }
 
 func (m model) renderBottomNav() string {
-	bottomNav := m.quitStyle.Render("press 'q' to quit\t't/T' today\t", m.selectedDate.Format("2.1"))
-	return bottomNav
+	left := m.navStyle.Render("q: quit")
+	right := m.navStyle.Render("↑/↓: campus\tt: today\t←/→: date")
+
+	rightBox := lipgloss.NewStyle().
+		Width(m.width - lipgloss.Width(left)).
+		Align(lipgloss.Right).
+		Render(right)
+
+	return m.navStyle.Width(m.width).Render(left + rightBox)
 }
 
 func (m model) renderSidebar() string {

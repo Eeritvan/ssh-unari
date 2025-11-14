@@ -2,7 +2,6 @@ package fetch
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -66,7 +65,6 @@ type Price struct {
 }
 
 func GetUnicafe() ([]Unicafe, error) {
-	fmt.Println("testing")
 	resp, err := http.Get(UNICAFE_API)
 	if err != nil {
 		// TODO: better error message
