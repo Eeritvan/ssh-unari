@@ -27,9 +27,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: |
-            ghcr.io/eeritvan/unari-ssh:${{ github.sha }}
-            ghcr.io/eeritvan/unari-ssh:latest
+          tags: ghcr.io/eeritvan/unari-ssh:latest
           cache-from: type=registry,ref=ghcr.io/eeritvan/unari-ssh:buildcache
           cache-to: type=registry,ref=ghcr.io/eeritvan/unari-ssh:buildcache,mode=max
           outputs: type=docker,dest=${{ runner.temp }}/unari-ssh.tar
