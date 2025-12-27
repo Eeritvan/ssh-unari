@@ -36,3 +36,13 @@ jobs:
         with:
           name: unari-ssh
           path: ${{ runner.temp }}/unari-ssh.tar
+      - name: Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:cicd
+      - name: Push webhook
+        run: |
+          curl -sS --fail -X POST \
+            "${{ secrets.WEBHOOK_URL }}"
