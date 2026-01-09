@@ -26,13 +26,14 @@ import (
 
 type unicafeDataMsg []fetch.Unicafe
 
-var CAMPUSES = [...]string{"Keskusta", "Kumpula", "Meilahti", "Viikki"}
+var LOCATIONS = [...]string{"Keskusta", "Kumpula", "Meilahti", "Töölö", "Viikki"}
 var unicafeData []fetch.Unicafe
 
-var CAMPUS_RESTAURANTS = map[string][]string{
+var LOCATION_RESTAURANTS = map[string][]string{
 	"Keskusta": {"Myöhä Café & Bar", "Kaivopiha", "Kaisa-talo", "Soc&Kom", "Rotunda", "Porthania Opettajien ravintola", "Porthania", "Topelias", "Olivia", "Metsätalo"},
 	"Kumpula":  {"Physicum", "Exactum", "Chemicum", "Chemicum Opettajien ravintola"},
 	"Meilahti": {"Terkko", "Meilahti"},
+	"Töölö":    {"Serpens"},
 	"Viikki":   {"Tähkä", "Biokeskus 2", "Infokeskus alakerta", "Viikuna", "Infokeskus", "Biokeskus"},
 }
 
@@ -40,6 +41,7 @@ const (
 	keskustaView int = iota
 	kumpulaView
 	meilahtiView
+	töölöView
 	viikkiView
 	totalViews
 )
@@ -234,6 +236,8 @@ func (m model) View() string {
 		content = m.renderRestaurant(m.currentView)
 	case meilahtiView:
 		content = m.renderRestaurant(m.currentView)
+	case töölöView:
+		content = m.renderRestaurant(m.currentView)
 	case viikkiView:
 		content = m.renderRestaurant(m.currentView)
 	}
@@ -260,8 +264,8 @@ func (m model) View() string {
 // TODO: scrollable view
 // TODO: mouse clicks
 func (m model) renderRestaurant(idx int) string {
-	campus := CAMPUSES[idx]
-	campusRestaurants := CAMPUS_RESTAURANTS[campus]
+	campus := LOCATIONS[idx]
+	campusRestaurants := LOCATION_RESTAURANTS[campus]
 
 	var restaurantList string
 	for _, restaurant := range m.data {
@@ -302,7 +306,7 @@ func (m model) renderFooter() string {
 func (m model) renderSidebar() string {
 	var campusList []string
 
-	for i, campus := range CAMPUSES {
+	for i, campus := range LOCATIONS {
 		var style lipgloss.Style
 		if i == m.currentView {
 			style = m.sidebarSelectedItemStyle
