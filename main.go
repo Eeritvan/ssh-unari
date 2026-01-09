@@ -273,13 +273,13 @@ func (m model) renderRestaurant(idx int) string {
 		if slices.Contains(campusRestaurants, name) {
 			for _, menu := range restaurant.Menu.Menus {
 				restaurantDate := strings.Split(menu.Date, " ")
-				currentDate := m.selectedDate.Format("2.1.")
+				currentDate := m.selectedDate.Format("02.01.")
 				if restaurantDate[len(restaurantDate)-1] == currentDate {
-					var test2 []string
-					for _, test := range menu.Data {
-						test2 = append(test2, test.Name)
+					var menuItem []string
+					for _, meal := range menu.Data {
+						menuItem = append(menuItem, meal.Name)
 					}
-					restaurantList += fmt.Sprintf("\n %s -- %v", name, test2)
+					restaurantList += fmt.Sprintf("\n %s -- %v", name, menuItem)
 				}
 			}
 		}
