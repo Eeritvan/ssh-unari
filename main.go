@@ -22,6 +22,7 @@ import (
 	"github.com/charmbracelet/wish/logging"
 	"github.com/eeritvan/unari-ssh/pkg/fetch"
 	"github.com/joho/godotenv"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 type unicafeDataMsg []fetch.Unicafe
@@ -56,6 +57,8 @@ func main() {
 
 	host := os.Getenv("HOST")
 	port := os.Getenv("PORT")
+
+	zone.NewGlobal()
 
 	s, err := wish.NewServer(
 		wish.WithAddress(net.JoinHostPort(host, port)),
@@ -152,7 +155,7 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		selectedDate:             currentDate,
 		loading:                  true,
 	}
-	return m, []tea.ProgramOption{tea.WithAltScreen()}
+	return m, []tea.ProgramOption{tea.WithMouseCellMotion(), tea.WithAltScreen()}
 }
 
 type model struct {
@@ -192,6 +195,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case unicafeDataMsg:
 		m.loading = false
 		m.data = msg
+	case tea.MouseMsg:
+		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
+			return m, nil
+		}
+		for i, campus := range LOCATIONS {
+			if m.currentView != i && zone.Get(campus).InBounds(msg) {
+				m.currentView = i
+			}
+		}
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -256,11 +269,9 @@ func (m model) View() string {
 
 	footer := m.renderFooter()
 
-	return lipgloss.JoinVertical(lipgloss.Left, mainView, footer)
+	return zone.Scan(lipgloss.JoinVertical(lipgloss.Left, mainView, footer))
 }
 
-// TODO: scrollable view
-// TODO: mouse clicks
 func (m model) renderRestaurant(idx int) string {
 	campus := LOCATIONS[idx]
 	campusRestaurants := LOCATION_RESTAURANTS[campus]
@@ -325,6 +336,9 @@ func (m model) renderSidebar() string {
 			style = m.sidebarItemStyle
 		}
 		sideBarItem := style.Render(campus)
+
+		sideBarItem = zone.Mark(fmt.Sprintf(campus), sideBarItem)
+
 		campusList = append(campusList, sideBarItem)
 	}
 
