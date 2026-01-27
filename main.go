@@ -150,12 +150,11 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		currentView:              kumpulaView,
 		data:                     unicafeData,
 		selectedDate:             currentDate,
+		loading:                  true,
 	}
 	return m, []tea.ProgramOption{tea.WithAltScreen()}
 }
 
-// TODO: loading state
-// TODO: error state
 type model struct {
 	term                     string
 	profile                  string
@@ -171,6 +170,7 @@ type model struct {
 	contentStyle             lipgloss.Style
 	data                     []fetch.Unicafe
 	selectedDate             time.Time
+	loading                  bool
 }
 
 func (m model) Init() tea.Cmd {
@@ -190,6 +190,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.width = msg.Width
 	case unicafeDataMsg:
+		m.loading = false
 		m.data = msg
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -227,6 +228,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	if m.loading {
+		return m.renderLoading()
+	}
 	if m.width < 40 || m.height < 10 {
 		return m.renderTermTooSmall()
 	}
@@ -332,7 +336,17 @@ func (m model) renderTermTooSmall() string {
 		Width(m.width).
 		Height(m.height).
 		Align(lipgloss.Center, lipgloss.Center).
+		Bold(true).
 		Render("Terminal too small")
+}
+
+func (m model) renderLoading() string {
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height).
+		Align(lipgloss.Center, lipgloss.Center).
+		Bold(true).
+		Render("Loading")
 }
 
 func max(a, b int) int {
