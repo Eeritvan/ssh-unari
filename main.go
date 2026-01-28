@@ -351,7 +351,7 @@ func (m model) renderRestaurant(idx int) string {
 						case "Lisäke":
 							mealType = m.mealText.Render(meal.Price.Name + " ")
 						case "Buffet":
-							mealType = m.mealText.Render(meal.Price.Name + " ")
+							mealType = m.mealText.Render("Lounas" + " ")
 						case "Vegaanilounas":
 							mealType = m.veganMealText.Render("Veg ")
 						case "Jälkiruoka":
