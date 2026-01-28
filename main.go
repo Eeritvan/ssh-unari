@@ -171,6 +171,7 @@ type model struct {
 	data                     []fetch.Unicafe
 	selectedDate             time.Time
 	loading                  bool
+	scrollOffset             int
 }
 
 func (m model) Init() tea.Cmd {
@@ -193,12 +194,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.data = msg
 	case tea.MouseMsg:
+		if msg.Button == tea.MouseButtonWheelDown {
+			m.scrollOffset += 2
+		}
+		if msg.Button == tea.MouseButtonWheelUp {
+			if m.scrollOffset >= 2 {
+				m.scrollOffset -= 2
+			}
+		}
 		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
 			return m, nil
 		}
 		for i, campus := range LOCATIONS {
 			if m.currentView != i && zone.Get(campus).InBounds(msg) {
 				m.currentView = i
+				m.scrollOffset = 0
 			}
 		}
 		return m, nil
@@ -211,17 +221,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.currentView < 0 {
 				m.currentView = totalViews - 1
 			}
+			m.scrollOffset = 0
 		case "down", "j":
 			m.currentView++
 			if m.currentView >= totalViews {
 				m.currentView = 0
 			}
+			m.scrollOffset = 0
 		case "right", "l": // next day
 			// TODO: check that unicafe has this date
 			m.selectedDate = m.selectedDate.AddDate(0, 0, 1)
+			m.scrollOffset = 0
 		case "left", "h": // prev day
 			// TODO: check that unicafe has this date
 			m.selectedDate = m.selectedDate.AddDate(0, 0, -1)
+			m.scrollOffset = 0
 		case "t", "T": // current date
 			finland, err := time.LoadLocation("Europe/Helsinki")
 			if err != nil {
@@ -229,9 +243,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				fmt.Println(err)
 			}
 			m.selectedDate = time.Now().In(finland)
-		case "ctrl+f":
-			// TODO: implement find
-			fmt.Println("find")
+			m.scrollOffset = 0
+			// case "ctrl+f":
+			// 	fmt.Println("find")
 		}
 	}
 	return m, nil
@@ -326,13 +340,37 @@ func (m model) renderRestaurant(idx int) string {
 		restaurantList.WriteString("\n\nNo data for this date.")
 	}
 
+	content := restaurantList.String()
+	lines := strings.Split(content, "\n")
+
+	// ai slop. didnt bother to check but seems to work ok
+	visibleHeight := m.height - 3 - 2
+
+	maxOffset := len(lines) - visibleHeight
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	if m.scrollOffset > maxOffset {
+		m.scrollOffset = maxOffset
+	}
+	if m.scrollOffset < 0 {
+		m.scrollOffset = 0
+	}
+
+	if m.scrollOffset > 0 && m.scrollOffset < len(lines) {
+		lines = lines[m.scrollOffset:]
+	}
+
+	scrolledContent := strings.Join(lines, "\n")
+	// ----
+
 	return m.contentStyle.
 		Padding(1, 2).
 		BorderStyle(lipgloss.RoundedBorder()).
 		Width(m.width - 26).
 		Height(m.height - 3).
 		MaxHeight(m.height - 1).
-		Render(restaurantList.String())
+		Render(scrolledContent)
 }
 
 // TODO: a: about?
