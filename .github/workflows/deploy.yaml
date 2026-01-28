@@ -9,6 +9,7 @@ on:
       - ".gitignore"
       - "Makefile"
       - ".air.toml"
+      - ".env.template"
 
 jobs:
   build-and-deploy:
