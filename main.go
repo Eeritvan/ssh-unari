@@ -123,7 +123,26 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		Bold(true).
 		Italic(true).
 		TabWidth(4).
-		Foreground(lipgloss.Color("#3C3C3C"))
+		Foreground(lipgloss.Color("#3C3C3C")).
+		Align(lipgloss.Right)
+	contentStyle := renderer.NewStyle().
+		Padding(1, 2).
+		BorderStyle(lipgloss.RoundedBorder())
+	restaurantHeader := renderer.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("12"))
+	mealText := renderer.NewStyle().
+		Foreground(lipgloss.Color("#ffcd73"))
+	veganMealText := renderer.NewStyle().
+		Foreground(lipgloss.Color("#ebffa3"))
+	dessertText := renderer.NewStyle().
+		Foreground(lipgloss.Color("#eaa3ff"))
+	termTooSmallStyle := renderer.NewStyle().
+		Bold(true).
+		Align(lipgloss.Center, lipgloss.Center)
+	loadingStyle := renderer.NewStyle().
+		Bold(true).
+		Align(lipgloss.Center, lipgloss.Center)
 	bg := "light"
 	if renderer.HasDarkBackground() {
 		bg = "dark"
@@ -147,6 +166,13 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		sidebarItemStyle:         sidebarItemStyle,
 		sidebarSelectedItemStyle: sidebarSelectedItemStyle,
 		footerStyle:              footerStyle,
+		contentStyle:             contentStyle,
+		restaurantHeader:         restaurantHeader,
+		mealText:                 mealText,
+		veganMealText:            veganMealText,
+		dessertText:              dessertText,
+		termTooSmallStyle:        termTooSmallStyle,
+		loadingStyle:             loadingStyle,
 		currentView:              kumpulaView,
 		data:                     unicafeData,
 		selectedDate:             currentDate,
@@ -168,6 +194,12 @@ type model struct {
 	sidebarItemStyle         lipgloss.Style
 	sidebarSelectedItemStyle lipgloss.Style
 	contentStyle             lipgloss.Style
+	restaurantHeader         lipgloss.Style
+	mealText                 lipgloss.Style
+	veganMealText            lipgloss.Style
+	dessertText              lipgloss.Style
+	termTooSmallStyle        lipgloss.Style
+	loadingStyle             lipgloss.Style
 	data                     []fetch.Unicafe
 	selectedDate             time.Time
 	loading                  bool
@@ -315,21 +347,21 @@ func (m model) renderRestaurant(idx int) string {
 						var mealType string
 						switch meal.Price.Name {
 						case "Lounas":
-							mealType = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffcd73")).Render(meal.Price.Name + " ")
+							mealType = m.mealText.Render(meal.Price.Name + " ")
 						case "Lisäke":
-							mealType = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffcd73")).Render(meal.Price.Name + " ")
+							mealType = m.mealText.Render(meal.Price.Name + " ")
 						case "Buffet":
-							mealType = lipgloss.NewStyle().Foreground(lipgloss.Color("#ffcd73")).Render(meal.Price.Name + " ")
+							mealType = m.mealText.Render(meal.Price.Name + " ")
 						case "Vegaanilounas":
-							mealType = lipgloss.NewStyle().Foreground(lipgloss.Color("#ebffa3")).Render("Veg ")
+							mealType = m.veganMealText.Render("Veg ")
 						case "Jälkiruoka":
-							mealType = lipgloss.NewStyle().Foreground(lipgloss.Color("#eaa3ff")).Render(meal.Price.Name + " ")
+							mealType = m.dessertText.Render(meal.Price.Name + " ")
 						}
 						menuItems = append(menuItems, " • "+mealType+strings.Trim(meal.Name, " "))
 					}
 
 					restaurantList.WriteString(fmt.Sprintf("\n\n%s\n%s",
-						lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12")).Render(restaurant.Title),
+						m.restaurantHeader.Render(restaurant.Title),
 						strings.Join(menuItems, "\n")))
 				}
 			}
@@ -346,10 +378,7 @@ func (m model) renderRestaurant(idx int) string {
 	// ai slop. didnt bother to check but seems to work ok
 	visibleHeight := m.height - 3 - 2
 
-	maxOffset := len(lines) - visibleHeight
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
+	maxOffset := max(len(lines)-visibleHeight, 0)
 	if m.scrollOffset > maxOffset {
 		m.scrollOffset = maxOffset
 	}
@@ -365,8 +394,6 @@ func (m model) renderRestaurant(idx int) string {
 	// ----
 
 	return m.contentStyle.
-		Padding(1, 2).
-		BorderStyle(lipgloss.RoundedBorder()).
 		Width(m.width - 26).
 		Height(m.height - 3).
 		MaxHeight(m.height - 1).
@@ -384,7 +411,6 @@ func (m model) renderFooter() string {
 
 	rightView := m.footerStyle.
 		Width(infoWidth).
-		Align(lipgloss.Right).
 		Render(right)
 
 	return lipgloss.JoinHorizontal(lipgloss.Bottom, leftView, rightView)
@@ -418,19 +444,15 @@ func (m model) renderSidebar() string {
 }
 
 func (m model) renderTermTooSmall() string {
-	return lipgloss.NewStyle().
+	return m.termTooSmallStyle.
 		Width(m.width).
 		Height(m.height).
-		Align(lipgloss.Center, lipgloss.Center).
-		Bold(true).
 		Render("Terminal too small")
 }
 
 func (m model) renderLoading() string {
-	return lipgloss.NewStyle().
+	return m.loadingStyle.
 		Width(m.width).
 		Height(m.height).
-		Align(lipgloss.Center, lipgloss.Center).
-		Bold(true).
 		Render("Loading")
 }
