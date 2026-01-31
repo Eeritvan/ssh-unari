@@ -11,3 +11,8 @@ open terminal and try typing `ssh unari.eeritvan.dev`
 4. create .env (see .env.template for required values)
 5. launch server with `go run .`
 6. connect to the app with another terminal using `ssh localhost -p <PORT>`
+
+--- 
+
+<img width="1312" height="789" alt="image" src="https://github.com/user-attachments/assets/7976f004-d8bd-47ba-a5c2-696ae891478f" />
+
