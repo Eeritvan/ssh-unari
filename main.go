@@ -7,23 +7,21 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"slices"
-	"sort"
-	"strings"
 	"syscall"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
-	"github.com/charmbracelet/ssh"
-	"github.com/charmbracelet/wish"
-	"github.com/charmbracelet/wish/activeterm"
-	"github.com/charmbracelet/wish/bubbletea"
-	"github.com/charmbracelet/wish/logging"
 	"github.com/eeritvan/unari-ssh/pkg/fetch"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"charm.land/log/v2"
+	"charm.land/wish/v2"
+	"charm.land/wish/v2/activeterm"
+	"charm.land/wish/v2/bubbletea"
+	"charm.land/wish/v2/logging"
+	"github.com/charmbracelet/ssh"
 	"github.com/joho/godotenv"
-	zone "github.com/lrstanley/bubblezone"
+	zone "github.com/lrstanley/bubblezone/v2"
 )
 
 type unicafeDataMsg []fetch.Unicafe
@@ -96,58 +94,6 @@ func main() {
 func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	pty, _, _ := s.Pty()
 
-	renderer := bubbletea.MakeRenderer(s)
-	txtStyle := renderer.NewStyle().Foreground(lipgloss.Color("10"))
-	sidebarStyle := renderer.NewStyle().
-		BorderStyle(lipgloss.RoundedBorder()).
-		Foreground(lipgloss.Color("#04B575")).
-		Padding(1, 2).
-		Width(20)
-	sidebarItemStyle := renderer.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Background(lipgloss.Color("#7D56F4")).
-		Padding(1, 2).
-		Margin(1, 0).
-		Width(16).
-		Align(lipgloss.Center)
-	sidebarSelectedItemStyle := renderer.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#000000")).
-		Background(lipgloss.Color("#FFFF00")).
-		Padding(1, 2).
-		Margin(1, 0).
-		Width(16).
-		Align(lipgloss.Center)
-	footerStyle := renderer.NewStyle().
-		Bold(true).
-		Italic(true).
-		TabWidth(4).
-		Foreground(lipgloss.Color("#3C3C3C")).
-		Align(lipgloss.Right)
-	contentStyle := renderer.NewStyle().
-		Padding(1, 2).
-		BorderStyle(lipgloss.RoundedBorder())
-	restaurantHeader := renderer.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("12"))
-	mealText := renderer.NewStyle().
-		Foreground(lipgloss.Color("#ffcd73"))
-	veganMealText := renderer.NewStyle().
-		Foreground(lipgloss.Color("#ebffa3"))
-	dessertText := renderer.NewStyle().
-		Foreground(lipgloss.Color("#eaa3ff"))
-	termTooSmallStyle := renderer.NewStyle().
-		Bold(true).
-		Align(lipgloss.Center, lipgloss.Center)
-	loadingStyle := renderer.NewStyle().
-		Bold(true).
-		Align(lipgloss.Center, lipgloss.Center)
-	bg := "light"
-	if renderer.HasDarkBackground() {
-		bg = "dark"
-	}
-
 	finland, err := time.LoadLocation("Europe/Helsinki")
 	if err != nil {
 		// TODO: better error message
@@ -156,54 +102,27 @@ func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 	currentDate := time.Now().In(finland)
 
 	m := model{
-		term:                     pty.Term,
-		profile:                  renderer.ColorProfile().Name(),
-		width:                    pty.Window.Width,
-		height:                   pty.Window.Height,
-		bg:                       bg,
-		txtStyle:                 txtStyle,
-		sidebarStyle:             sidebarStyle,
-		sidebarItemStyle:         sidebarItemStyle,
-		sidebarSelectedItemStyle: sidebarSelectedItemStyle,
-		footerStyle:              footerStyle,
-		contentStyle:             contentStyle,
-		restaurantHeader:         restaurantHeader,
-		mealText:                 mealText,
-		veganMealText:            veganMealText,
-		dessertText:              dessertText,
-		termTooSmallStyle:        termTooSmallStyle,
-		loadingStyle:             loadingStyle,
-		currentView:              kumpulaView,
-		data:                     unicafeData,
-		selectedDate:             currentDate,
-		loading:                  true,
+		term:         pty.Term,
+		width:        pty.Window.Width,
+		height:       pty.Window.Height,
+		currentView:  kumpulaView,
+		data:         unicafeData,
+		selectedDate: currentDate,
+		loading:      true,
 	}
-	return m, []tea.ProgramOption{tea.WithMouseCellMotion(), tea.WithAltScreen()}
+	return m, nil
 }
 
 type model struct {
-	term                     string
-	profile                  string
-	width                    int
-	height                   int
-	bg                       string
-	currentView              int
-	txtStyle                 lipgloss.Style
-	footerStyle              lipgloss.Style
-	sidebarStyle             lipgloss.Style
-	sidebarItemStyle         lipgloss.Style
-	sidebarSelectedItemStyle lipgloss.Style
-	contentStyle             lipgloss.Style
-	restaurantHeader         lipgloss.Style
-	mealText                 lipgloss.Style
-	veganMealText            lipgloss.Style
-	dessertText              lipgloss.Style
-	termTooSmallStyle        lipgloss.Style
-	loadingStyle             lipgloss.Style
-	data                     []fetch.Unicafe
-	selectedDate             time.Time
-	loading                  bool
-	scrollOffset             int
+	term         string
+	profile      string
+	width        int
+	height       int
+	currentView  int
+	data         []fetch.Unicafe
+	selectedDate time.Time
+	loading      bool
+	scrollOffset int
 }
 
 func (m model) Init() tea.Cmd {
@@ -225,17 +144,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case unicafeDataMsg:
 		m.loading = false
 		m.data = msg
-	case tea.MouseMsg:
-		if msg.Button == tea.MouseButtonWheelDown {
+	case tea.MouseReleaseMsg:
+		if msg.Mouse().Button == tea.MouseWheelDown {
 			m.scrollOffset += 2
 		}
-		if msg.Button == tea.MouseButtonWheelUp {
+		if msg.Mouse().Button == tea.MouseWheelUp {
 			if m.scrollOffset >= 2 {
 				m.scrollOffset -= 2
 			}
-		}
-		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
-			return m, nil
 		}
 		for i, campus := range LOCATIONS {
 			if m.currentView != i && zone.Get(campus).InBounds(msg) {
@@ -283,176 +199,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
+	var v tea.View
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+
 	if m.loading {
-		return m.renderLoading()
+		v.SetContent(m.renderLoading())
+		return v
 	}
 	if m.width < 40 || m.height < 10 {
-		return m.renderTermTooSmall()
+		v.SetContent(m.renderTermTooSmall())
+		return v
 	}
 
-	sidebar := m.renderSidebar()
-	restaurantView := m.renderRestaurant(m.currentView)
-	footer := m.renderFooter()
+	v.SetContent(zone.Scan(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.JoinHorizontal(lipgloss.Top,
+			m.renderSidebar(),
+			m.renderRestaurant(),
+		),
+		m.renderFooter(),
+	)))
 
-	mainView := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, restaurantView)
-
-	return zone.Scan(lipgloss.JoinVertical(lipgloss.Left, mainView, footer))
-}
-
-func (m model) renderRestaurant(idx int) string {
-	campus := LOCATIONS[idx]
-	campusRestaurants := LOCATION_RESTAURANTS[campus]
-
-	var restaurantList strings.Builder
-	restaurantList.WriteString(m.txtStyle.Bold(true).Underline(true).Render(m.selectedDate.Format("Monday 02.01.2006")))
-	restaurantList.WriteString("\n")
-
-	found := false
-	for _, restaurant := range m.data {
-		if slices.Contains(campusRestaurants, restaurant.Title) {
-			for _, menu := range restaurant.Menu.Menus {
-				restaurantDate := strings.Split(menu.Date, " ")
-				currentDate := m.selectedDate.Format("02.01.")
-				if restaurantDate[len(restaurantDate)-1] == currentDate {
-					found = true
-					var menuItems []string
-
-					rank := func(name string) int {
-						n := strings.ToLower(strings.TrimSpace(name))
-						switch n {
-						case "lounas":
-							return 0
-						case "vegaanilounas":
-							return 1
-						case "lisäke":
-							return 2
-						case "jälkiruoka":
-							return 3
-						default:
-							return 100
-						}
-					}
-
-					sort.SliceStable(menu.Data, func(i, j int) bool {
-						ri := rank(menu.Data[i].Price.Name)
-						rj := rank(menu.Data[j].Price.Name)
-						if ri != rj {
-							return ri < rj
-						}
-						return strings.ToLower(strings.TrimSpace(menu.Data[i].Name)) < strings.ToLower(strings.TrimSpace(menu.Data[j].Name))
-					})
-
-					for _, meal := range menu.Data {
-						var mealType string
-						switch meal.Price.Name {
-						case "Lounas":
-							mealType = m.mealText.Render(meal.Price.Name + " ")
-						case "Lisäke":
-							mealType = m.mealText.Render(meal.Price.Name + " ")
-						case "Buffet":
-							mealType = m.mealText.Render("Lounas" + " ")
-						case "Vegaanilounas":
-							mealType = m.veganMealText.Render("Veg ")
-						case "Jälkiruoka":
-							mealType = m.dessertText.Render(meal.Price.Name + " ")
-						}
-						menuItems = append(menuItems, " • "+mealType+strings.Trim(meal.Name, " "))
-					}
-
-					restaurantList.WriteString(fmt.Sprintf("\n\n%s\n%s",
-						m.restaurantHeader.Render(restaurant.Title),
-						strings.Join(menuItems, "\n")))
-				}
-			}
-		}
-	}
-
-	if !found {
-		restaurantList.WriteString("\n\nNo data for this date.")
-	}
-
-	content := restaurantList.String()
-	lines := strings.Split(content, "\n")
-
-	// ai slop. didnt bother to check but seems to work ok
-	visibleHeight := m.height - 3 - 2
-
-	maxOffset := max(len(lines)-visibleHeight, 0)
-	if m.scrollOffset > maxOffset {
-		m.scrollOffset = maxOffset
-	}
-	if m.scrollOffset < 0 {
-		m.scrollOffset = 0
-	}
-
-	if m.scrollOffset > 0 && m.scrollOffset < len(lines) {
-		lines = lines[m.scrollOffset:]
-	}
-
-	scrolledContent := strings.Join(lines, "\n")
-	// ----
-
-	return m.contentStyle.
-		Width(m.width - 26).
-		Height(m.height - 3).
-		MaxHeight(m.height - 1).
-		Render(scrolledContent)
-}
-
-// TODO: a: about?
-func (m model) renderFooter() string {
-	left := m.footerStyle.Render("q: quit")
-	right := m.footerStyle.Render("↑/↓: campus\tt: today\t←/→: date")
-
-	leftView := m.footerStyle.Render(left)
-
-	infoWidth := m.width - lipgloss.Width(leftView)
-
-	rightView := m.footerStyle.
-		Width(infoWidth).
-		Render(right)
-
-	return lipgloss.JoinHorizontal(lipgloss.Bottom, leftView, rightView)
-}
-
-func (m model) renderSidebar() string {
-	var campusList []string
-
-	for i, campus := range LOCATIONS {
-		var style lipgloss.Style
-		if i == m.currentView {
-			style = m.sidebarSelectedItemStyle
-		} else {
-			style = m.sidebarItemStyle
-		}
-		sideBarItem := style.Render(campus)
-
-		sideBarItem = zone.Mark(fmt.Sprintf(campus), sideBarItem)
-
-		campusList = append(campusList, sideBarItem)
-	}
-
-	sidebarList := lipgloss.JoinVertical(lipgloss.Center, campusList...)
-
-	sidebarStyleWithHeight := m.sidebarStyle.
-		Width(22).
-		Height(m.height - 3).
-		MaxHeight(m.height - 1)
-
-	return sidebarStyleWithHeight.Render(sidebarList)
-}
-
-func (m model) renderTermTooSmall() string {
-	return m.termTooSmallStyle.
-		Width(m.width).
-		Height(m.height).
-		Render("Terminal too small")
-}
-
-func (m model) renderLoading() string {
-	return m.loadingStyle.
-		Width(m.width).
-		Height(m.height).
-		Render("Loading")
+	return v
 }
