@@ -1,5 +1,5 @@
 ## ssh unari
-A cli tool to browser unicafe menus via ssh
+A cli tool to browse unicafe menus via ssh
 
 ### production
 open terminal and try typing `ssh unari.eeritvan.dev`
